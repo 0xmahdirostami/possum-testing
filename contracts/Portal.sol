@@ -3,7 +3,7 @@ pragma solidity =0.8.19;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol"; //@audit
 import {MintBurnToken} from "./MintBurnToken.sol";
 import {IStaking} from "./interfaces/IStaking.sol";
 import {ICompounder} from "./interfaces/ICompounder.sol";
@@ -229,7 +229,7 @@ contract Portal is ReentrancyGuard {
         accounts[_user].stakedBalance += _amount;
 
         /// @dev Update the user's maxStakeDebt based on added stake amount and current maxLockDuration
-        accounts[_user].maxStakeDebt = ((accounts[_user].stakedBalance + _amount) * maxLockDuration * 1e18) / (SECONDS_PER_YEAR * DECIMALS);
+        accounts[_user].maxStakeDebt = (accounts[_user].stakedBalance * maxLockDuration * 1e18) / (SECONDS_PER_YEAR * DECIMALS);//@audit
 
         /// @dev Update the user's portalEnergy
         accounts[_user].portalEnergy += portalEnergyEarned + portalEnergyIncrease;
@@ -309,13 +309,13 @@ contract Portal is ReentrancyGuard {
     /// @param _amount The amount of tokens to unstake
     function unstake(uint256 _amount) external nonReentrant existingAccount {
         /// @dev Require that the staked amount is greater than zero
-        if (_amount == 0) {revert InvalidInput();}
+        if (_amount == 0) {revert InvalidInput();} //@audit
 
         /// @dev Update the user's stake data
         _updateAccount(msg.sender,0);
 
         /// @dev Require that the amount to be unstaked is less than or equal to the available withdrawable balance and the staked balance
-        if(_amount > accounts[msg.sender].availableToWithdraw) {revert InsufficientToWithdraw();}
+        if(_amount > accounts[msg.sender].availableToWithdraw) {revert InsufficientToWithdraw();} //@audit
 
         /// @dev Withdraw the matching amount of principal from the yield source (external protocol)
         /// @dev Sanity check that the withdrawn amount from yield source is the amount sent to user
@@ -919,7 +919,7 @@ contract Portal is ReentrancyGuard {
         stakedBalance = accounts[_user].stakedBalance + _amount;
 
         /// @dev Update the user's max stake debt
-        maxStakeDebt = ((accounts[_user].stakedBalance + _amount) * maxLockDuration * 1e18) / (SECONDS_PER_YEAR * DECIMALS);
+        maxStakeDebt = ((accounts[_user].stakedBalance) * maxLockDuration * 1e18) / (SECONDS_PER_YEAR * DECIMALS);
 
         /// @dev Update the user's portalEnergy by adding the portalEnergy earned since the last update
         portalEnergy = accounts[_user].portalEnergy + portalEnergyEarned + portalEnergyIncrease;

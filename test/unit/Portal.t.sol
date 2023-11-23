@@ -39,6 +39,7 @@ contract PortalTest is Test {
 
     // time
     uint256 timestamp;
+    uint256 timeAfterActivating;
 
     // prank addresses
     address Alice = address(0x1);
@@ -115,6 +116,7 @@ contract PortalTest is Test {
 
         // creation time
         timestamp = block.timestamp;
+        timeAfterActivating = timestamp + _FUNDING_PHASE_DURATION;
 
         // bToken, ENERGY Token
         bToken.transferOwnership(address(portal));
@@ -144,7 +146,7 @@ contract PortalTest is Test {
     // ---------------------------------------------------
 
     // reverts
-    function testRevert_funding0() public{
+    function testRevert_funding0Amount() public{
         vm.startPrank(Alice);
         IERC20(PSM_ADDRESS).approve(address(portal), 1e5);
         vm.expectRevert(InvalidInput.selector);
@@ -233,8 +235,8 @@ contract PortalTest is Test {
     // reverts
     function testRevert_newTimeLessThanMaxlockduraion() external{
         vm.warp(timestamp);
-        vm.expectRevert();
-        portal.updateMaxLockDuration(DurationCannotIncrease.selector);
+        vm.expectRevert(DurationCannotIncrease.selector);
+        portal.updateMaxLockDuration();
     }
     function testRevert_lockDurationNotUpdateable() external{
         vm.warp(timestamp + 365*6 days);
@@ -262,7 +264,7 @@ contract PortalTest is Test {
         vm.startPrank(Bob);
         IERC20(PSM_ADDRESS).approve(address(portal), 1e18);
         portal.contributeFunding(1e18);
-        vm.warp(timestamp + _FUNDING_PHASE_DURATION);
+        vm.warp(timeAfterActivating);
         portal.activatePortal();
         vm.stopPrank();
     }
@@ -288,7 +290,7 @@ contract PortalTest is Test {
         portal.stake(1e5);
     }
     function testRevert_stake0Amount() external {
-        help_fundActivate();
+        help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         vm.expectRevert(InvalidInput.selector);
@@ -300,14 +302,14 @@ contract PortalTest is Test {
         portal.unstake(1e5);
     }
     function testRevert_unStake0Amount() external {
-        help_fundActivate();
+        help_fundAndActivate();
         help_stake();
         vm.startPrank(Alice);
         vm.expectRevert(InvalidInput.selector);
         portal.unstake(0);
     }
     function testRevert_unStakeMoreThanStaked() external {
-        help_fundActivate();
+        help_fundAndActivate();
         help_stake();
         vm.startPrank(Alice);
         vm.expectRevert(InsufficientToWithdraw.selector);
@@ -335,51 +337,91 @@ contract PortalTest is Test {
         portal.stake(1e5);
     }
     function testEvent_reStake() external {
-        help_fundActivate();
+        help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        vm.expectEmit(true, true, true, true, address(portal));
+        vm.expectEmit(address(portal));
         emit StakePositionUpdated(address(Alice), 
         block.timestamp,
         maxLockDuration,
         1e5,
-        1e5*maxLockDuration/SECONDS_PER_YEAR,
-        1e5*maxLockDuration/SECONDS_PER_YEAR,
+        1e5*maxLockDuration/SECONDS_PER_YEAR,       //100000*7776000/31536000=24657
+        1e5*maxLockDuration/SECONDS_PER_YEAR,       //24657
         1e5);
         portal.stake(1e5);
+        vm.expectEmit(address(portal));
+        emit StakePositionUpdated(address(Alice), 
+        block.timestamp,                            //lastUpdateTime 1701103606
+        maxLockDuration,                            //maxLockDuration 7776000
+        1e5*2,                                      //stakedBalance 200000
+        1e5*2*maxLockDuration/SECONDS_PER_YEAR,     //maxStakeDebt 49315 
+        1e5*2*maxLockDuration/SECONDS_PER_YEAR - 1, //portalEnergy 49314
+        199995);                                    //availableToWithdraw 199995
+        portal.stake(1e5);
     }
-    function testevent_unstake() external {
-        help_fundActivate();
+    function testEvent_unStake() external {
+        help_fundAndActivate();
+        help_stake();
         vm.startPrank(Alice);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        vm.expectEmit(true, true, true, true, address(portal));
+        vm.expectEmit(address(portal));
         emit StakePositionUpdated(address(Alice), 
         block.timestamp,
         maxLockDuration,
-        1e5,
-        1e5*maxLockDuration/SECONDS_PER_YEAR,
-        1e5*maxLockDuration/SECONDS_PER_YEAR,
-        1e5);
-        portal.stake(1e5);
+        0,
+        0,
+        0,
+        0);
+        portal.unstake(1e18);
     }
-    function testevent_forceunstake() external {
-        help_fundActivate();
+    function testEvent_unStakePartially() external {
+        help_fundAndActivate();
+        help_stake();
         vm.startPrank(Alice);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        vm.expectEmit(true, true, true, true, address(portal));
+        vm.expectEmit(address(portal));
         emit StakePositionUpdated(address(Alice), 
         block.timestamp,
         maxLockDuration,
-        1e5,
-        1e5*maxLockDuration/SECONDS_PER_YEAR,
-        1e5*maxLockDuration/SECONDS_PER_YEAR,
-        1e5);
-        portal.stake(1e5);
+        5e17,
+        5e17*maxLockDuration/SECONDS_PER_YEAR,
+        5e17*maxLockDuration/SECONDS_PER_YEAR,
+        5e17);
+        portal.unstake(5e17);
     }
+    function testEvent_forceunStake() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectEmit(address(portal));
+        emit StakePositionUpdated(address(Alice), 
+        block.timestamp,
+        maxLockDuration,
+        0,
+        0,
+        0,
+        0);
+        portal.forceUnstakeAll();
+    }
+    function testEvent_forceunStakeWithExtraEnergy() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectEmit(address(portal));
+        emit StakePositionUpdated(address(Alice), 
+        block.timestamp,
+        maxLockDuration,
+        0,
+        0, //
+        1902587519025, //1902587519025 = 60 * 1e18 / 31536000 
+        0);
+        portal.unstake(1e18);
+    }
+
+        // (, , , , , portalEnergy,) = portal.getUpdateAccount(address(Alice),0); /// UNTILL HERE
+        // console2.log(portalEnergy);
 
     // stake
     function test_stake() external {
-        help_fundActivate();
+        help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         portal.stake(1e5);
@@ -399,7 +441,7 @@ contract PortalTest is Test {
         assertEq(availableToWithdraw, 1e5);
     }
     function test_restake() external {
-        help_fundActivate();
+        help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         portal.stake(1e5);
@@ -419,7 +461,7 @@ contract PortalTest is Test {
         assertEq(availableToWithdraw, 1e5);
     }
     function test_unstake() external {
-        help_fundActivate();
+        help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         portal.stake(1e5);
@@ -439,7 +481,7 @@ contract PortalTest is Test {
         assertEq(availableToWithdraw, 1e5);
     }
     function test_forceunstake() external {
-        help_fundActivate();
+        help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         portal.stake(1e5);
@@ -469,12 +511,12 @@ contract PortalTest is Test {
     
     //revert
     function testrevert_notexitaccount() external {
-        help_fundActivate();
+        help_fundAndActivate();
         vm.expectRevert();
         portal.buyPortalEnergy(1e18, 1e18, block.timestamp);
     }
     function testrevert_buy0() external {
-        help_fundActivate();
+        help_fundAndActivate();
         help_stake();
         vm.startPrank(Alice);
         vm.expectRevert();
