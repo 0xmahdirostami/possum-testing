@@ -310,13 +310,12 @@ contract Portal is ReentrancyGuard {
     function unstake(uint256 _amount) external nonReentrant existingAccount {
         /// @dev Require that the staked amount is greater than zero
         if (_amount == 0) {revert InvalidInput();}
-        
+
         /// @dev Update the user's stake data
         _updateAccount(msg.sender,0);
 
         /// @dev Require that the amount to be unstaked is less than or equal to the available withdrawable balance and the staked balance
         if(_amount > accounts[msg.sender].availableToWithdraw) {revert InsufficientToWithdraw();}
-        if(_amount > accounts[msg.sender].stakedBalance) {revert InsufficientStake();}
 
         /// @dev Withdraw the matching amount of principal from the yield source (external protocol)
         /// @dev Sanity check that the withdrawn amount from yield source is the amount sent to user

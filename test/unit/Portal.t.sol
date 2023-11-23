@@ -144,13 +144,13 @@ contract PortalTest is Test {
     // ---------------------------------------------------
 
     // reverts
-    function testrevert_0amount() public{
+    function testRevert_funding0() public{
         vm.startPrank(Alice);
         IERC20(PSM_ADDRESS).approve(address(portal), 1e5);
         vm.expectRevert(InvalidInput.selector);
         portal.contributeFunding(0);
     }
-    function testrevert_activeportal() public{
+    function testRevert_fundingActivePortal() public{
         vm.warp(timestamp + 432001);
         portal.activatePortal();
         vm.startPrank(Alice);
@@ -160,21 +160,25 @@ contract PortalTest is Test {
     }
 
     // event
-    function testevent_funding() public {
+    function testEvent_funding() public {
         vm.startPrank(Alice);
         IERC20(PSM_ADDRESS).approve(address(portal), 1e5);
-        vm.expectEmit(true, true, false, true, address(portal));
+        vm.expectEmit(address(portal));
         emit FundingReceived(address(Alice), 1e5*10);
         portal.contributeFunding(1e5);
     }
 
     // funding
-    function test_Funding() public {
+    function test_funding() public {
         vm.startPrank(Alice);
+        assertEq(portal.fundingBalance(), 0);
+        assertEq(bToken.totalSupply(), 0);
+        assertEq(bToken.balanceOf(address(Alice)), 0);
         IERC20(PSM_ADDRESS).approve(address(portal), 2e5);
         portal.contributeFunding(1e5);
         assertEq(portal.fundingBalance(), 1e5);
         assertEq(bToken.totalSupply(), 1e5*10);
+        assertEq(bToken.balanceOf(address(Alice)), 1e5*10);
         portal.contributeFunding(1e5);
         assertEq(portal.fundingBalance(), 1e5*2);
         assertEq(bToken.totalSupply(), 1e5*2*10);
@@ -186,21 +190,21 @@ contract PortalTest is Test {
     // ---------------------------------------------------
 
     // reverts
-    function testrevert_activateportal2twice() public{
+    function testRevert_activatePortalTwice() public{
         vm.warp(timestamp + 432001);
         portal.activatePortal();
-        vm.expectRevert();
+        vm.expectRevert(PortalAlreadyActive.selector);
         portal.activatePortal();
     }
-    function testrevert_beforefundingphase() public{
-        vm.expectRevert();
+    function testRevert_beforeFundingPhaseEnded() public{
+        vm.expectRevert(FundingPhaseOngoing.selector);
         portal.activatePortal();
     }
 
     // events
-    function testevent_activateprotal() public{
+    function testEvent_activateProtal() public{
         vm.warp(timestamp + 432001);
-        vm.expectEmit(true, true, false, true, address(portal));
+        vm.expectEmit(address(portal));
         emit PortalActivated(address(portal), 0);
         portal.activatePortal();
     }
@@ -218,7 +222,7 @@ contract PortalTest is Test {
         portal.activatePortal();
         assertEq(portal.isActivePortal(), true);
         assertEq(portal.fundingMaxRewards(), 1e5*10);
-        assertEq(portal.constantProduct(), 18181818);
+        assertEq(portal.constantProduct(), 18181818); //1e5*1e5/550
         assertEq(portal.fundingBalance(), 1e5);
     }
 
@@ -227,21 +231,19 @@ contract PortalTest is Test {
     // ---------------------------------------------------
 
     // reverts
-    function testrevert_timelessthanmaxlockduraion() external{
+    function testRevert_newTimeLessThanMaxlockduraion() external{
         vm.warp(timestamp);
         vm.expectRevert();
-        portal.updateMaxLockDuration();
+        portal.updateMaxLockDuration(DurationCannotIncrease.selector);
     }
-    function testrevert_lockDurationUpdateable() external{
-        console2.log(block.timestamp);
+    function testRevert_lockDurationNotUpdateable() external{
         vm.warp(timestamp + 365*6 days);
-        console2.log(block.timestamp);
         portal.updateMaxLockDuration();
-        vm.expectRevert();
+        vm.expectRevert(DurationLocked.selector);
         portal.updateMaxLockDuration();
     }
 
-    // test_updateMaxLockDuration
+    // updateMaxLockDuration
     function test_updateMaxLockDuration() external{
         assertEq(portal.maxLockDuration(), maxLockDuration);
         vm.warp(timestamp + maxLockDuration + 1);
@@ -253,7 +255,7 @@ contract PortalTest is Test {
     }
 
     /////////////////////////////////////////////////////////// helper
-    function help_fundActivate() internal {
+    function help_fundAndActivate() internal {
         vm.startPrank(Alice);
         IERC20(PSM_ADDRESS).approve(address(portal), 1e18);
         portal.contributeFunding(1e18);
@@ -279,50 +281,50 @@ contract PortalTest is Test {
     // ---------------------------------------------------
 
     // reverts
-    function testrevert_stakenonactive() external {
+    function testRevert_stakePortalNotActive() external {
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        vm.expectRevert();
+        vm.expectRevert(PortalNotActive.selector);
         portal.stake(1e5);
     }
-    function testrevert_0stake() external {
+    function testRevert_stake0Amount() external {
         help_fundActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         vm.expectRevert(InvalidInput.selector);
         portal.stake(0);
     }
-    function testrevert_unstakenonactive() external {
+    function testRevert_unStakeExistingAccount() external {
         vm.startPrank(Alice);
-        vm.expectRevert();
+        vm.expectRevert(AccountDoesNotExist.selector);
         portal.unstake(1e5);
     }
-    function testrevert_0unstake() external {
+    function testRevert_unStake0Amount() external {
         help_fundActivate();
         help_stake();
         vm.startPrank(Alice);
         vm.expectRevert(InvalidInput.selector);
         portal.unstake(0);
     }
-    function testrevert_unstakemorethanstake() external {
+    function testRevert_unStakeMoreThanStaked() external {
         help_fundActivate();
         help_stake();
         vm.startPrank(Alice);
-        vm.expectRevert();
+        vm.expectRevert(InsufficientToWithdraw.selector);
         portal.unstake(1e19);
     }
-    function testrevert_forceunstakenonactive() external {
+    function testRevert_forceunStakeExistingAccount() external {
         vm.startPrank(Alice);
-        vm.expectRevert();
+        vm.expectRevert(AccountDoesNotExist.selector);
         portal.forceUnstakeAll();
     }
 
     // events
-    function testevent_stake() external {
-        help_fundActivate();
+    function testEvent_stake() external {
+        help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        vm.expectEmit(true, true, true, true, address(portal));
+        vm.expectEmit(address(portal));
         emit StakePositionUpdated(address(Alice), 
         block.timestamp,
         maxLockDuration,
@@ -332,7 +334,7 @@ contract PortalTest is Test {
         1e5);
         portal.stake(1e5);
     }
-    function testevent_restake() external {
+    function testEvent_reStake() external {
         help_fundActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
