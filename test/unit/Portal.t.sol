@@ -30,7 +30,7 @@ contract PortalTest is Test {
     uint256 constant _TERMINAL_MAX_LOCK_DURATION = 157680000;  
     uint256 constant _AMOUNT_TO_CONVERT  = 100000*1e18;
     uint256 constant private SECONDS_PER_YEAR = 31536000;   // seconds in a 365 day year
-    uint256 public maxLockDuration = 7776000;               // starting value for maximum allowed lock duration of user´s balance in seconds (90 days)
+    uint256 public maxLockDuration = 7776000;               // 7776000 starting value for maximum allowed lock duration of user´s balance in seconds (90 days)
     uint256 constant private _DECIMALS = 1e18;
     uint256 constant private _TRADE_TIMELOCK = 60;
 
@@ -404,6 +404,7 @@ contract PortalTest is Test {
     function testEvent_forceunStakeWithExtraEnergy() external {
         help_fundAndActivate();
         help_stake();
+        vm.warp(timeAfterActivating + 60);
         vm.startPrank(Alice);
         vm.expectEmit(address(portal));
         emit StakePositionUpdated(address(Alice), 
@@ -501,6 +502,25 @@ contract PortalTest is Test {
         assertEq(availableToWithdraw, 1e5);
     }
 
+    function testtest() external{
+        help_fundAndActivate();
+        vm.startPrank(Alice);
+        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
+        portal.stake(1e5);
+        console2.log("user stake 1e5");
+        (, , ,uint256 stakedBalance,uint256 maxStakeDebt,uint256 portalEnergy,uint256 availableToWithdraw) = portal.getUpdateAccount(address(Alice),0);
+        console2.log("user stakedBalance", stakedBalance);
+        console2.log("user maxStakeDebt", maxStakeDebt);
+        console2.log("user portalEnergy", portalEnergy);
+        console2.log("user availableToWithdraw", availableToWithdraw);
+        portal.stake(1e5);
+        console2.log("user stake 1e5 again");
+        (, , ,uint256 stakedBalance1,uint256 maxStakeDebt1,uint256 portalEnergy1,uint256 availableToWithdraw1) = portal.getUpdateAccount(address(Alice),0);
+        console2.log("user stakedBalance", stakedBalance1);
+        console2.log("user maxStakeDebt", maxStakeDebt1);
+        console2.log("user portalEnergy", portalEnergy1);
+        console2.log("user availableToWithdraw", availableToWithdraw1);
+    }
     // ---------------------------------------------------
     // ---------------------mint,burn---------------------
     // ---------------------------------------------------
@@ -509,7 +529,7 @@ contract PortalTest is Test {
     // ---------------buy and sell energy token-----------
     // ---------------------------------------------------
     
-    //revert
+    // revert
     function testrevert_notexitaccount() external {
         help_fundAndActivate();
         vm.expectRevert();
@@ -523,17 +543,24 @@ contract PortalTest is Test {
         portal.buyPortalEnergy(0, 0, 0);
     }
 
-    //event
+    // event
 
-    //buy and sell
+    // buy and sell
+
+    // ---------------------------------------------------
+    // --------------------compound-----------------------
+    // ---------------------------------------------------
+    // revert
+    // event
+    // compound
 
     // ---------------------------------------------------
     // ---------------------convert-----------------------
     // ---------------------------------------------------
 
-    //revert
-    //event
-    //convert
+    // revert
+    // event
+    // convert
     
     // ---------------------------------------------------
     // ---------------------view--------------------------
