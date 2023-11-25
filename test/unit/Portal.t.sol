@@ -4,21 +4,29 @@ pragma solidity =0.8.19;
 import {Test, console2} from "forge-std/Test.sol";
 import {Portal} from "../../contracts/Portal.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 import {MintBurnToken} from "../mocks/MintToken.sol";
 import {IHLP} from "../mocks/IHLP.sol";
 
-
 //forge test --fork-url https://arbitrum-mainnet.infura.io/v3/<> --fork-block-number 153000000 
-//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Done by mahdiRostami 
+// I have availability for smart contract security audits and testing. 
+// Reach out to me on [Twitter](https://twitter.com/0xmahdirostami) or [GitHub](https://github.com/0xmahdirostami/audits).
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 contract PortalTest is Test {
 
     // addresses
     address private constant PSM_ADDRESS = 0x17A8541B82BF67e10B0874284b4Ae66858cb1fd5;
     address private constant PRINCIPAL_TOKEN_ADDRESS = 0x4307fbDCD9Ec7AEA5a1c2958deCaa6f316952bAb;
-    address private constant HLP_STAKING = 0x4307fbDCD9Ec7AEA5a1c2958deCaa6f316952bAb;
+    address private constant USDCe =0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
+    // Pools
+    address payable private constant HLP_STAKING = payable (0xbE8f8AF5953869222eA8D39F1Be9d03766010B1C);
+    address private constant HMX_STAKING = 0x92E586B8D4Bf59f4001604209A292621c716539a;
+    // rewarders
     address private constant HLP_PROTOCOL_REWARDER = 0x665099B3e59367f02E5f9e039C3450E31c338788;
     address private constant HLP_EMISSIONS_REWARDER = 0x6D2c18B559C5343CB0703bB55AADB5f22152cC32;
-    address private constant HMX_STAKING = 0x92E586B8D4Bf59f4001604209A292621c716539a;
     address private constant HMX_PROTOCOL_REWARDER = 0xB698829C4C187C85859AD2085B24f308fC1195D3;
     address private constant HMX_EMISSIONS_REWARDER = 0x94c22459b145F012F1c6791F2D729F7a22c44764;
     address private constant HMX_DRAGONPOINTS_REWARDER = 0xbEDd351c62111FB7216683C2A26319743a06F273;
@@ -42,8 +50,9 @@ contract PortalTest is Test {
     uint256 timeAfterActivating;
 
     // prank addresses
-    address Alice = address(0x1);
-    address Bob = address(0x002);
+    address Alice = address(0x01);
+    address Bob = address(0x02);
+    address Karen = address(0x03);
 
     // tokens
     MintBurnToken bToken = new MintBurnToken("BT","BT");
@@ -121,28 +130,60 @@ contract PortalTest is Test {
         // bToken, ENERGY Token
         bToken.transferOwnership(address(portal));
         eToken.transferOwnership(address(portal));
+        
+        // PSM TOKEN, PT TOKEN
+        deal(PSM_ADDRESS, Alice, 1e30, true);
+        deal(PSM_ADDRESS, Bob, 1e30, true);
+        deal(PSM_ADDRESS, address(this), 1e30, true);
+        deal(PRINCIPAL_TOKEN_ADDRESS, Alice, 1e30, true);
+        deal(PRINCIPAL_TOKEN_ADDRESS, Bob, 1e30, true);
+        deal(PRINCIPAL_TOKEN_ADDRESS, address(this), 1e30, true);
+        deal(USDCe, address(this), 1e30, true);
+        
 
-        // PSM TOKEN
-        address PSMWale = 0xAb845D09933f52af5642FC87Dd8FBbf553fd7B33;
-        vm.startPrank(PSMWale);
-        IERC20(PSM_ADDRESS).transfer(address(this), 1e25);
+        // // PSM TOKEN
+        // address PSMWale = 0xAb845D09933f52af5642FC87Dd8FBbf553fd7B33;
+        // vm.startPrank(PSMWale);
+        // IERC20(PSM_ADDRESS).transfer(address(this), 1e27);
 
-        // PT TOKEN
-        address PTOwner = 0x6409ba830719cd0fE27ccB3051DF1b399C90df4a;
-        vm.startPrank(PTOwner);
-        IHLP(PRINCIPAL_TOKEN_ADDRESS).setMinter(address(this), true);
+        // // PT TOKEN
+        // address PTOwner = 0x6409ba830719cd0fE27ccB3051DF1b399C90df4a;
+        // vm.startPrank(PTOwner);
+        // IHLP(PRINCIPAL_TOKEN_ADDRESS).setMinter(address(this), true);
+        // vm.stopPrank();
+        // IHLP(PRINCIPAL_TOKEN_ADDRESS).mint(address(this), 1e25);
+
+        // // distribute tokens
+        // IERC20(PSM_ADDRESS).transfer(address(Alice), 1e26);
+        // IERC20(PSM_ADDRESS).transfer(address(Bob), 1e26);
+        // IERC20(PRINCIPAL_TOKEN_ADDRESS).transfer(address(Alice), 1e20);
+        // IERC20(PRINCIPAL_TOKEN_ADDRESS).transfer(address(Bob), 1e20);
+    }
+    
+    /////////////////////////////////////////////////////////// helper
+    function help_fundAndActivate() internal {
+        vm.startPrank(Alice);
+        IERC20(PSM_ADDRESS).approve(address(portal), 1e18);
+        portal.contributeFunding(1e18);
+        vm.startPrank(Bob);
+        IERC20(PSM_ADDRESS).approve(address(portal), 1e18);
+        portal.contributeFunding(1e18);
+        vm.warp(timeAfterActivating);
+        portal.activatePortal();
         vm.stopPrank();
-        IHLP(PRINCIPAL_TOKEN_ADDRESS).mint(address(this), 1e25);
-
-        // distribute tokens
-        IERC20(PSM_ADDRESS).transfer(address(Alice), 1e20);
-        IERC20(PSM_ADDRESS).transfer(address(Bob), 1e20);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).transfer(address(Alice), 1e20);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).transfer(address(Bob), 1e20);
+    }
+    function help_stake() internal {
+        vm.startPrank(Alice);
+        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
+        portal.stake(1e18);
+        vm.startPrank(Bob);
+        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
+        portal.stake(1e18);
+        vm.stopPrank();
     }
 
     // ---------------------------------------------------
-    // --------------------funding------------------------
+    // -----------------funding&burnBtokens---------------
     // ---------------------------------------------------
 
     // reverts
@@ -153,13 +194,19 @@ contract PortalTest is Test {
         portal.contributeFunding(0);
     }
     function testRevert_fundingActivePortal() public{
-        vm.warp(timestamp + 432001);
-        portal.activatePortal();
-        vm.startPrank(Alice);
-        IERC20(PSM_ADDRESS).approve(address(portal), 1e5);
+        help_fundAndActivate();
         vm.expectRevert(PortalAlreadyActive.selector);
         portal.contributeFunding(1e5);
     }
+    function testRevert_burnBtokensPortalNotActive() public{
+        vm.expectRevert(PortalNotActive.selector);
+        portal.burnBtokens(1e5);
+    }
+    function testRevert_burnBtokens0Amount() public{
+        help_fundAndActivate();
+        vm.expectRevert(InvalidInput.selector);
+        portal.burnBtokens(0);
+    }    
 
     // event
     function testEvent_funding() public {
@@ -168,6 +215,14 @@ contract PortalTest is Test {
         vm.expectEmit(address(portal));
         emit FundingReceived(address(Alice), 1e5*10);
         portal.contributeFunding(1e5);
+    }
+    function testEvent_burnBtokens() public {
+        help_fundAndActivate();
+        vm.startPrank(Alice);
+        IERC20(bToken).approve(address(portal), 1e5);
+        vm.expectEmit(address(portal));
+        emit RewardsRedeemed(address(Alice), 1e5, 0);
+        portal.burnBtokens(1e5);
     }
 
     // funding
@@ -185,6 +240,38 @@ contract PortalTest is Test {
         assertEq(portal.fundingBalance(), 1e5*2);
         assertEq(bToken.totalSupply(), 1e5*2*10);
         assertEq(bToken.balanceOf(address(Alice)), 1e5*2*10);
+    }
+
+    // burning
+    function test_burnBtokens() public {
+        help_fundAndActivate();
+
+        IERC20(USDCe).transfer(address(portal), 1);
+        IERC20(PSM_ADDRESS).approve(address(portal), _AMOUNT_TO_CONVERT);
+        portal.convert(USDCe, 0, timeAfterActivating + 61); // 1e22 funding balance
+
+        vm.startPrank(Alice);
+        IERC20(bToken).approve(address(portal), 1e19);
+
+        uint256 portalPSMBalanceBefore = IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        uint256 alicePSMBalanceBefore = IERC20(PSM_ADDRESS).balanceOf(Alice);
+        uint256 totalSupplyBefore = IERC20(bToken).totalSupply();
+        uint256 bTokenBalanceBefore = IERC20(bToken).balanceOf(Alice);
+
+        portal.burnBtokens(1e19);
+
+        uint256 fundingRewardPoolBalanceAfter = portal.fundingRewardPool();
+        uint256 portalPSMBalanceAfter = IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        uint256 alicePSMBalanceAfter = IERC20(PSM_ADDRESS).balanceOf(Alice);
+        uint256 totalSupplyAfter = IERC20(bToken).totalSupply();
+        uint256 bTokenBalanceAfter = IERC20(bToken).balanceOf(Alice);
+
+        assertEq(fundingRewardPoolBalanceAfter, 5e21);// 1e19 * 1e22 / 2e19 = 5e21
+        assertEq(portalPSMBalanceBefore-portalPSMBalanceAfter, 5e21);
+        assertEq(alicePSMBalanceAfter-alicePSMBalanceBefore, 5e21);
+        assertEq(totalSupplyBefore-totalSupplyAfter, 1e19);
+        assertEq(bTokenBalanceBefore-bTokenBalanceAfter, 1e19);
+
     }
 
     // ---------------------------------------------------
@@ -256,26 +343,89 @@ contract PortalTest is Test {
         assertEq(portal.maxLockDuration(), _TERMINAL_MAX_LOCK_DURATION);        
     }
 
-    /////////////////////////////////////////////////////////// helper
-    function help_fundAndActivate() internal {
-        vm.startPrank(Alice);
-        IERC20(PSM_ADDRESS).approve(address(portal), 1e18);
-        portal.contributeFunding(1e18);
-        vm.startPrank(Bob);
-        IERC20(PSM_ADDRESS).approve(address(portal), 1e18);
-        portal.contributeFunding(1e18);
-        vm.warp(timeAfterActivating);
-        portal.activatePortal();
-        vm.stopPrank();
+    // ---------------------------------------------------
+    // ---------------PortalEnergyToken-------------------
+    // ---------------------------------------------------
+
+    // reverts
+    function testRevert_mintPortalEnergyToken0Amount() external{
+        vm.expectRevert(InvalidInput.selector);
+        portal.mintPortalEnergyToken(Alice, 0);
     }
-    function help_stake() internal {
+    function testRevert_mintPortalEnergyTokenFor0Address() external{
+        vm.expectRevert(InvalidInput.selector);
+        portal.mintPortalEnergyToken(address(0), 1);
+    }
+    function testRevert_mintPortalEnergyTokenAccountDoesNotExist() external{
+        vm.expectRevert(AccountDoesNotExist.selector);
+        portal.mintPortalEnergyToken(Karen, 1);
+    }
+    function testRevert_mintPortalEnergyTokenInsufficientBalance() external{
+        help_fundAndActivate();
+        help_stake();
         vm.startPrank(Alice);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        portal.stake(1e18);
-        vm.startPrank(Bob);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        portal.stake(1e18);
-        vm.stopPrank();
+        vm.expectRevert(InsufficientBalance.selector);
+        portal.mintPortalEnergyToken(Alice, 1e18);
+    }
+    function testRevert_burnPrtalEnergyToken0Amount() external{
+        vm.expectRevert(InvalidInput.selector);
+        portal.burnPortalEnergyToken(Alice, 0);
+    }
+    function testRevert_burnPortalEnergyTokenForAccountDoesNotExist() external{
+        vm.expectRevert(AccountDoesNotExist.selector);
+        portal.burnPortalEnergyToken(Karen, 1);
+    }
+    function testRevert_burnPortalEnergyTokenInsufficientBalance() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.expectRevert(InsufficientBalance.selector);
+        portal.burnPortalEnergyToken(Alice, 1e18);
+    }
+    
+    // events
+    function testEvent_mintPortalEnergyToken() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectEmit(address(portal));
+        emit PortalEnergyMinted(Alice, Karen, 246575342465753424); //1e18*maxlock/year = 246,575,342,465,753,424
+        portal.mintPortalEnergyToken(Karen, 246575342465753424);
+    }
+    function testEvent_burnPortalEnergyToken() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        portal.mintPortalEnergyToken(Karen, 246575342465753424);
+        vm.startPrank(Karen);
+        eToken.approve(address(portal), 246575342465753424);
+        vm.expectEmit(address(portal));
+        emit PortalEnergyBurned(Karen, Alice, 246575342465753424);
+        portal.burnPortalEnergyToken(Alice, 246575342465753424);
+    }
+
+    // mintPortalEnergyToken
+    function test_mintPortalEnergyToken() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        portal.mintPortalEnergyToken(Karen, 246575342465753424);
+        assertEq(eToken.balanceOf(Karen), 246575342465753424);
+         (, , , , , uint256 portalEnergy,) = portal.getUpdateAccount(Alice,0);
+        assertEq(portalEnergy, 0);
+    }
+
+    // burnPortalEnergyToken
+    function test_burnPortalEnergyToken() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        portal.mintPortalEnergyToken(Karen, 246575342465753424);
+        vm.startPrank(Karen);
+        eToken.approve(address(portal), 246575342465753424);
+        portal.burnPortalEnergyToken(Alice, 246575342465753424);
+        assertEq(eToken.balanceOf(Karen), 0);
+         (, , , , , uint256 portalEnergy,) = portal.getUpdateAccount(Alice,0);
+        assertEq(portalEnergy, 246575342465753424);
     }
 
     // ---------------------------------------------------
@@ -417,7 +567,8 @@ contract PortalTest is Test {
         portal.unstake(1e18);
     }
 
-        // (, , , , , portalEnergy,) = portal.getUpdateAccount(address(Alice),0); /// UNTILL HERE
+        /// UNTILL HERE ------------------------------------
+        // (, , , , , portalEnergy,) = portal.getUpdateAccount(address(Alice),0); 
         // console2.log(portalEnergy);
 
     // stake
@@ -501,69 +652,377 @@ contract PortalTest is Test {
         assertEq(portalEnergy, 1e5*maxLockDuration/SECONDS_PER_YEAR);
         assertEq(availableToWithdraw, 1e5);
     }
-
-    function testtest() external{
-        help_fundAndActivate();
-        vm.startPrank(Alice);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
-        portal.stake(1e5);
-        console2.log("user stake 1e5");
-        (, , ,uint256 stakedBalance,uint256 maxStakeDebt,uint256 portalEnergy,uint256 availableToWithdraw) = portal.getUpdateAccount(address(Alice),0);
-        console2.log("user stakedBalance", stakedBalance);
-        console2.log("user maxStakeDebt", maxStakeDebt);
-        console2.log("user portalEnergy", portalEnergy);
-        console2.log("user availableToWithdraw", availableToWithdraw);
-        portal.stake(1e5);
-        console2.log("user stake 1e5 again");
-        (, , ,uint256 stakedBalance1,uint256 maxStakeDebt1,uint256 portalEnergy1,uint256 availableToWithdraw1) = portal.getUpdateAccount(address(Alice),0);
-        console2.log("user stakedBalance", stakedBalance1);
-        console2.log("user maxStakeDebt", maxStakeDebt1);
-        console2.log("user portalEnergy", portalEnergy1);
-        console2.log("user availableToWithdraw", availableToWithdraw1);
-    }
-    // ---------------------------------------------------
-    // ---------------------mint,burn---------------------
-    // ---------------------------------------------------
-
     // ---------------------------------------------------
     // ---------------buy and sell energy token-----------
     // ---------------------------------------------------
     
     // revert
-    function testrevert_notexitaccount() external {
-        help_fundAndActivate();
-        vm.expectRevert();
-        portal.buyPortalEnergy(1e18, 1e18, block.timestamp);
+    function testRevert_buyPortalEnergynotexitaccount() external {
+        vm.expectRevert(AccountDoesNotExist.selector);
+        portal.buyPortalEnergy(0, 0, 0);
     }
-    function testrevert_buy0() external {
+    function testRevert_buyPortalEnergy0Amount() external {
         help_fundAndActivate();
         help_stake();
         vm.startPrank(Alice);
-        vm.expectRevert();
+        vm.expectRevert(InvalidInput.selector);
         portal.buyPortalEnergy(0, 0, 0);
+    }
+    function testRevert_buyPortalEnergy0MinReceived() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectRevert(InvalidInput.selector);
+        portal.buyPortalEnergy(1, 0, 0);
+    }
+    function testRevert_buyPortalEnergyAfterDeadline() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectRevert(DeadlineExpired.selector);
+        portal.buyPortalEnergy(1, 1, block.timestamp - 1);
+    }
+    function testRevert_buyPortalEnergyTradeTimelockActive() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        portal.sellPortalEnergy(1e10, 1e10, block.timestamp);
+        IERC20(PSM_ADDRESS).approve(address(portal), 1e10);
+        vm.expectRevert(TradeTimelockActive.selector);
+        portal.buyPortalEnergy(1e10, 1, block.timestamp);
+    }
+    function testRevert_buyPortalEnergyAmountReceived() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        IERC20(PSM_ADDRESS).approve(address(portal), 1e10);
+        vm.expectRevert(InvalidOutput.selector);
+        portal.buyPortalEnergy(1e10, 1e18, block.timestamp);
+    }
+    function testRevert_sellPortalEnergynotexitaccount() external {
+        vm.expectRevert(AccountDoesNotExist.selector);
+        portal.sellPortalEnergy(0, 0, 0);
+    }
+    function testRevert_sellPortalEnergy0Amount() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectRevert(InvalidInput.selector);
+        portal.sellPortalEnergy(0, 0, 0);
+    }
+    function testRevert_sellPortalEnergy0MinReceived() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectRevert(InvalidInput.selector);
+        portal.sellPortalEnergy(1, 0, 0);
+    }
+    function testRevert_sellPortalEnergyAfterDeadline() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectRevert(DeadlineExpired.selector);
+        portal.sellPortalEnergy(1, 1, block.timestamp - 1);
+    }
+        function testRevert_sellPortalEnergyTradeTimelockActive() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        IERC20(PSM_ADDRESS).approve(address(portal), 1e10);
+        portal.buyPortalEnergy(1e10, 1, block.timestamp);
+        vm.expectRevert(TradeTimelockActive.selector);
+        portal.sellPortalEnergy(1e10, 1e10, block.timestamp);
+    }
+    function testRevert_sellPortalEnergyInsufficientBalance() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectRevert(InsufficientBalance.selector);
+        portal.sellPortalEnergy(10e18, 1e18, block.timestamp);
+    }
+    function testRevert_sellPortalEnergyAmountReceived() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectRevert(InvalidOutput.selector);
+        portal.sellPortalEnergy(1e10, 1e18, block.timestamp);
     }
 
     // event
+    function testEvent_buyPortalEnergy() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        IERC20(PSM_ADDRESS).approve(address(portal), 1e15);
+        vm.expectEmit(address(portal));
+        emit PortalEnergyBuyExecuted(Alice, 1817273181591); //reserve 0 = 2e18 // reserve1= 2e18*2e18/550/2e18 = 7e33/2e18 = 3636363636363636 // amountReceived = 1e15 * 3636363636363636 / 1e15 + 2e18 = 1817273181591
+        portal.buyPortalEnergy(1e15, 1e5, block.timestamp);
+    }
+    function testEvent_sellPortalEnergy() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        vm.expectEmit(address(portal));
+        emit PortalEnergySellExecuted(Alice, 1e15); //reserve 0 = 2e18 // reserve1= 2e18*2e18/550/2e18 = 7e33/2e18 = 3636363636363636 // amountReceived = 1e15 * 2e18 / 1e15 + 3636363636363636 = 431372549019607876
+        portal.sellPortalEnergy(1e15, 1e5, block.timestamp);
+    }
 
     // buy and sell
+    function test_buyPortalEnergy() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        IERC20(PSM_ADDRESS).approve(address(portal), 1e15);
+        (, , , , , uint256 portalEnergyBefore,) = portal.getUpdateAccount(address(Alice),0);
+        uint256 PSMBalanceAliceBefore = IERC20(PSM_ADDRESS).balanceOf(Alice);
+        uint256 PSMBalancePortalBefore = IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        //reserve 0 = 2e18 // reserve1= 2e18*2e18/550/2e18 = 7e33/2e18 = 3636363636363636 // amountReceived = 1e15 * 3636363636363636 / 1e15 + 2e18 = 1817273181591
+        portal.buyPortalEnergy(1e15, 1e5, block.timestamp);
+        (, , , , , uint256 portalEnergyAfter,) = portal.getUpdateAccount(address(Alice),0);
+        uint256 PSMBalanceAliceAfter = IERC20(PSM_ADDRESS).balanceOf(Alice);
+        uint256 PSMBalancePortalAfter = IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        assertEq(portalEnergyAfter-portalEnergyBefore, 1817273181591);
+        assertEq(PSMBalanceAliceBefore-PSMBalanceAliceAfter, 1e15);
+        assertEq(PSMBalancePortalAfter-PSMBalancePortalBefore, 1e15);
+    }
+    function test_sellPortalEnergy() external {
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        (, , , , , uint256 portalEnergyBefore,) = portal.getUpdateAccount(address(Alice),0);
+        uint256 PSMBalanceAliceBefore = IERC20(PSM_ADDRESS).balanceOf(Alice);
+        uint256 PSMBalancePortalBefore = IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        //reserve 0 = 2e18 // reserve1= 2e18*2e18/550/2e18 = 7e33/2e18 = 3636363636363636 // amountReceived = 1e15 * 2e18 / 1e15 + 3636363636363636 = 431372549019607876
+        portal.sellPortalEnergy(1e15, 1e5, block.timestamp);
+        (, , , , , uint256 portalEnergyAfter,) = portal.getUpdateAccount(address(Alice),0);
+        uint256 PSMBalanceAliceAfter = IERC20(PSM_ADDRESS).balanceOf(Alice);
+        uint256 PSMBalancePortalAfter = IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        assertEq(portalEnergyBefore-portalEnergyAfter, 1e15);
+        assertEq(PSMBalanceAliceAfter-PSMBalanceAliceBefore, 431372549019607876);
+        assertEq(PSMBalancePortalBefore-PSMBalancePortalAfter, 431372549019607876);
+    }
 
     // ---------------------------------------------------
     // --------------------compound-----------------------
     // ---------------------------------------------------
-    // revert
-    // event
-    // compound
 
+    // event
+    function testEvent_compound() external {
+        help_fundAndActivate();
+        help_stake();
+
+        address[] memory pools = new address[](2);
+        pools[0] = HLP_STAKING;
+        pools[1] = HMX_STAKING;
+        address[][] memory rewarders = new address[][](2);
+        rewarders[0] = new address[](2);
+        rewarders[0][0] = HLP_PROTOCOL_REWARDER;
+        rewarders[0][1] = HLP_EMISSIONS_REWARDER;
+        rewarders[1] = new address[](3);
+        rewarders[1][0] = HMX_PROTOCOL_REWARDER;
+        rewarders[1][1] = HMX_EMISSIONS_REWARDER;
+        rewarders[1][2] = HMX_DRAGONPOINTS_REWARDER;
+
+        vm.expectEmit(address(portal));
+        emit RewardsClaimed(pools, rewarders, timeAfterActivating);
+        portal.claimRewardsHLPandHMX();
+    }
+
+    // compound
+    function test_compound() external { 
+        help_fundAndActivate();
+        help_stake();
+        vm.warp(timeAfterActivating + 60);
+        uint256 balanceBefore = IERC20(USDCe).balanceOf(address(portal));
+        portal.claimRewardsHLPandHMX();
+        uint256 balanceAfter = IERC20(USDCe).balanceOf(address(portal));
+        assertGt(balanceAfter, balanceBefore);
+    }
+    function test_compoundManual() external { 
+        help_fundAndActivate();
+        help_stake();
+        vm.warp(timeAfterActivating + 60);
+        uint256 balanceBefore = IERC20(USDCe).balanceOf(address(portal));
+
+        address[] memory pools = new address[](2);
+        pools[0] = HLP_STAKING;
+        pools[1] = HMX_STAKING;
+        address[][] memory rewarders = new address[][](2);
+        rewarders[0] = new address[](2);
+        rewarders[0][0] = HLP_PROTOCOL_REWARDER;
+        rewarders[0][1] = HLP_EMISSIONS_REWARDER;
+        rewarders[1] = new address[](3);
+        rewarders[1][0] = HMX_PROTOCOL_REWARDER;
+        rewarders[1][1] = HMX_EMISSIONS_REWARDER;
+        rewarders[1][2] = HMX_DRAGONPOINTS_REWARDER;
+
+        portal.claimRewardsManual(pools, rewarders);
+        uint256 balanceAfter = IERC20(USDCe).balanceOf(address(portal));
+        assertGt(balanceAfter, balanceBefore);
+    }
+     function test_compoundMahdi() external { 
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 10e25);
+        portal.stake(10e25);
+        console2.log("10e25 staked");
+        uint256 balance = IERC20(USDCe).balanceOf(address(portal));
+        console2.log("USDCe balance before claimRewardsHLPandHMX", balance);
+        portal.claimRewardsHLPandHMX();
+        balance = IERC20(USDCe).balanceOf(address(portal));
+        console2.log("USDCe balance after first claimRewardsHLPandHMX", balance);
+        vm.startPrank(Bob);
+        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 10e25);
+        portal.stake(10e25);
+        console2.log("another 10e25 staked");
+        vm.warp(timeAfterActivating + 50 days);
+        console2.log("50 days");
+        portal.claimRewardsHLPandHMX();
+        balance = IERC20(USDCe).balanceOf(address(portal));
+        console2.log("USDCe balance now", balance);
+        vm.warp(timeAfterActivating + 100000 days);
+        console2.log("100000 days");
+        portal.claimRewardsHLPandHMX();
+        balance = IERC20(USDCe).balanceOf(address(portal));
+        console2.log(balance);
+        console2.log("USDCe balance now", balance);
+    }
     // ---------------------------------------------------
     // ---------------------convert-----------------------
     // ---------------------------------------------------
 
     // revert
-    // event
+    function testRevert_convertPSMToken() external{
+        vm.expectRevert(InvalidToken.selector);
+        portal.convert(PSM_ADDRESS, 0, 0);
+    }
+    function testRevert_convertAfterDeadLine() external{
+        vm.expectRevert(DeadlineExpired.selector);
+        portal.convert(USDCe, 0, block.timestamp-1);
+    }
+    function testRevert_convertContractBalance0() external{
+        vm.expectRevert(InvalidOutput.selector);
+        portal.convert(USDCe, 0, block.timestamp);
+    }
+    function testRevert_convertContractBalanceFewerThanMinReceived() external{
+        IERC20(USDCe).transfer(address(portal), 1);
+        vm.expectRevert(InvalidOutput.selector);
+        portal.convert(USDCe, 2, block.timestamp);
+    }
+
     // convert
-    
+    function test_convertUCDCe() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.warp(timeAfterActivating + 60);
+        portal.claimRewardsHLPandHMX();
+        IERC20(PSM_ADDRESS).approve(address(portal), _AMOUNT_TO_CONVERT);
+
+        uint256 balanceBeforePSM =IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        uint256 balanceBeforeUSDCe =IERC20(USDCe).balanceOf(address(portal));
+        uint256 fundingRewardPoolBefore = portal.fundingRewardPool();
+        uint256 fundingRewardsCollectedBefore = portal.fundingRewardsCollected();
+
+        portal.convert(address(USDCe), 0, timeAfterActivating + 61);
+
+        uint256 balanceAfterPSM =IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        uint256 balanceAfterUSDCe =IERC20(USDCe).balanceOf(address(portal));
+        uint256 fundingRewardPoolAfter = portal.fundingRewardPool();
+        uint256 fundingRewardsCollectedAfter = portal.fundingRewardsCollected();
+
+        assertEq(balanceAfterPSM-balanceBeforePSM, _AMOUNT_TO_CONVERT);
+        assertEq(balanceBeforeUSDCe-balanceAfterUSDCe, 1);
+        assertEq(fundingRewardPoolAfter-fundingRewardPoolBefore, 10000*1e18);
+        assertEq(fundingRewardsCollectedAfter-fundingRewardsCollectedBefore, 10000*1e18);
+    }
+    function test_convertUCDCeTotalSupply0() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.warp(timeAfterActivating + 60);
+        portal.claimRewardsHLPandHMX();
+        vm.startPrank(Alice);
+        uint256 amount = bToken.balanceOf(address(Alice));
+        bToken.approve(address(portal), amount);
+        portal.burnBtokens(amount);
+        vm.startPrank(Bob);
+        amount = bToken.balanceOf(address(Bob));
+        bToken.approve(address(portal), amount);
+        portal.burnBtokens(amount);
+        vm.stopPrank();
+
+        assertEq(bToken.totalSupply(), 0);
+
+        IERC20(PSM_ADDRESS).approve(address(portal), _AMOUNT_TO_CONVERT);
+
+        uint256 fundingRewardPoolBefore = portal.fundingRewardPool();
+        uint256 fundingRewardsCollectedBefore = portal.fundingRewardsCollected();
+
+        portal.convert(address(USDCe), 0, timeAfterActivating + 61);
+
+        uint256 fundingRewardPoolAfter = portal.fundingRewardPool();
+        uint256 fundingRewardsCollectedAfter = portal.fundingRewardsCollected();
+
+        assertEq(fundingRewardPoolAfter-fundingRewardPoolBefore, 0);
+        assertEq(fundingRewardsCollectedAfter-fundingRewardsCollectedBefore, 0);
+    }
+    function test_convertUCDCeFundingMaxRewards() external{
+        help_fundAndActivate();
+        help_stake();
+        // funded 2e18 -> fundingMaxRewards = 2e19
+        IERC20(PSM_ADDRESS).approve(address(portal), _AMOUNT_TO_CONVERT*2);
+        assertEq(portal.fundingRewardsCollected(), 0);
+        assertEq(portal.fundingRewardPool(), 0);
+        IERC20(USDCe).transfer(address(portal), 1);
+        portal.convert(address(USDCe), 0, timeAfterActivating + 1);
+        assertEq(portal.fundingRewardsCollected(), 10000*1e18);
+        assertEq(portal.fundingRewardPool(), 10000*1e18);
+        IERC20(USDCe).transfer(address(portal), 1); 
+        portal.convert(address(USDCe), 0, timeAfterActivating + 2);
+        assertEq(portal.fundingRewardsCollected(), 10000*1e18);
+        assertEq(portal.fundingRewardPool(), 10000*1e18);
+    }
+    function test_convertETH() external{
+        help_fundAndActivate();
+        help_stake();
+        payable(address(portal)).transfer(1 ether);
+        vm.startPrank(Alice);
+        IERC20(PSM_ADDRESS).approve(address(portal), _AMOUNT_TO_CONVERT);
+        uint256 balanceBeforeETH = address(portal).balance;
+        uint256 balanceBeforePSM =IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        portal.convert(address(0), 0, timeAfterActivating + 60);
+        uint256 balanceAfterETH = address(portal).balance;
+        uint256 balanceAfterPSM =IERC20(PSM_ADDRESS).balanceOf(address(portal));
+        assertEq(balanceBeforeETH-balanceAfterETH, 1 ether);
+        assertEq(balanceAfterPSM-balanceBeforePSM, _AMOUNT_TO_CONVERT);
+    }
+    // ---------------------------------------------------
+    // ---------------------accept ETH--------------------
+    // ---------------------------------------------------
+    function test_acceptETH() external{
+        assertEq(address(portal).balance, 0);
+        payable(address(portal)).transfer(1 ether);
+        assertEq(address(portal).balance, 1 ether);
+    }
+    function test_acceptETHwithData() external{
+        assertEq(address(portal).balance, 0);
+        address(portal).call{value: 1 ether}("0xPortal");
+        assertEq(address(portal).balance, 1 ether);
+    }
     // ---------------------------------------------------
     // ---------------------view--------------------------
     // ---------------------------------------------------
+    function test_getBalanceOfToken() external{
+        assertEq(portal.getBalanceOfToken(PSM_ADDRESS), 0);
+        IERC20(PSM_ADDRESS).transfer(address(portal), 1e5);
+        assertEq(portal.getBalanceOfToken(PSM_ADDRESS), 1e5);
+    }
+    function test_getPendingRewards() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.warp(timeAfterActivating + 60);
+        assertGt(portal.getPendingRewards(HLP_PROTOCOL_REWARDER), 0);
+        assertGt(portal.getPendingRewards(HLP_EMISSIONS_REWARDER), 0);
+    }
 
 }
