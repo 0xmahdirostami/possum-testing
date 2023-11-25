@@ -4,17 +4,15 @@ pragma solidity =0.8.19;
 import {Test, console2} from "forge-std/Test.sol";
 import {Portal} from "../../contracts/Portal.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
 import {MintBurnToken} from "../mocks/MintToken.sol";
-import {IHLP} from "../mocks/IHLP.sol";
 
-//forge test --fork-url https://arbitrum-mainnet.infura.io/v3/<> --fork-block-number 153000000 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Done by mahdiRostami 
-// I have availability for smart contract security audits and testing. 
+//                                                Done by mahdiRostami 
+//                              I have availability for smart contract security audits and testing. 
 // Reach out to me on [Twitter](https://twitter.com/0xmahdirostami) or [GitHub](https://github.com/0xmahdirostami/audits).
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 contract PortalTest is Test {
 
     // addresses
@@ -139,25 +137,6 @@ contract PortalTest is Test {
         deal(PRINCIPAL_TOKEN_ADDRESS, Bob, 1e30, true);
         deal(PRINCIPAL_TOKEN_ADDRESS, address(this), 1e30, true);
         deal(USDCe, address(this), 1e30, true);
-        
-
-        // // PSM TOKEN
-        // address PSMWale = 0xAb845D09933f52af5642FC87Dd8FBbf553fd7B33;
-        // vm.startPrank(PSMWale);
-        // IERC20(PSM_ADDRESS).transfer(address(this), 1e27);
-
-        // // PT TOKEN
-        // address PTOwner = 0x6409ba830719cd0fE27ccB3051DF1b399C90df4a;
-        // vm.startPrank(PTOwner);
-        // IHLP(PRINCIPAL_TOKEN_ADDRESS).setMinter(address(this), true);
-        // vm.stopPrank();
-        // IHLP(PRINCIPAL_TOKEN_ADDRESS).mint(address(this), 1e25);
-
-        // // distribute tokens
-        // IERC20(PSM_ADDRESS).transfer(address(Alice), 1e26);
-        // IERC20(PSM_ADDRESS).transfer(address(Bob), 1e26);
-        // IERC20(PRINCIPAL_TOKEN_ADDRESS).transfer(address(Alice), 1e20);
-        // IERC20(PRINCIPAL_TOKEN_ADDRESS).transfer(address(Bob), 1e20);
     }
     
     /////////////////////////////////////////////////////////// helper
@@ -567,10 +546,6 @@ contract PortalTest is Test {
         portal.unstake(1e18);
     }
 
-        /// UNTILL HERE ------------------------------------
-        // (, , , , , portalEnergy,) = portal.getUpdateAccount(address(Alice),0); 
-        // console2.log(portalEnergy);
-
     // stake
     function test_stake() external {
         help_fundAndActivate();
@@ -592,10 +567,11 @@ contract PortalTest is Test {
         assertEq(portalEnergy, 1e5*maxLockDuration/SECONDS_PER_YEAR);
         assertEq(availableToWithdraw, 1e5);
     }
-    function test_restake() external {
+    function test_reStake() external {
         help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
+        portal.stake(1e5);
         portal.stake(1e5);
         (address user,
         uint256 lastUpdateTime,
@@ -607,16 +583,17 @@ contract PortalTest is Test {
         assertEq(user, address(Alice));
         assertEq(lastUpdateTime, block.timestamp);
         assertEq(lastMaxLockDuration, maxLockDuration);
-        assertEq(stakedBalance, 1e5);
-        assertEq(maxStakeDebt, 1e5*maxLockDuration/SECONDS_PER_YEAR);
-        assertEq(portalEnergy, 1e5*maxLockDuration/SECONDS_PER_YEAR);
-        assertEq(availableToWithdraw, 1e5);
+        assertEq(stakedBalance, 2*1e5);
+        assertEq(maxStakeDebt, 2*1e5*maxLockDuration/SECONDS_PER_YEAR);
+        assertEq(portalEnergy, (2*1e5*maxLockDuration/SECONDS_PER_YEAR)-1); // beacuse of there are two division for portal energy
+        assertEq(availableToWithdraw, 199995); // beacuse of portalEnergy
     }
-    function test_unstake() external {
+    function test_unStake() external {
         help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         portal.stake(1e5);
+        portal.unstake(1e5);
         (address user,
         uint256 lastUpdateTime,
         uint256 lastMaxLockDuration,
@@ -627,16 +604,17 @@ contract PortalTest is Test {
         assertEq(user, address(Alice));
         assertEq(lastUpdateTime, block.timestamp);
         assertEq(lastMaxLockDuration, maxLockDuration);
-        assertEq(stakedBalance, 1e5);
-        assertEq(maxStakeDebt, 1e5*maxLockDuration/SECONDS_PER_YEAR);
-        assertEq(portalEnergy, 1e5*maxLockDuration/SECONDS_PER_YEAR);
-        assertEq(availableToWithdraw, 1e5);
+        assertEq(stakedBalance, 0);
+        assertEq(maxStakeDebt, 0);
+        assertEq(portalEnergy, 0);
+        assertEq(availableToWithdraw, 0);
     }
-    function test_forceunstake() external {
+    function test_forceunStake() external {
         help_fundAndActivate();
         vm.startPrank(Alice);
         IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
         portal.stake(1e5);
+        portal.forceUnstakeAll();
         (address user,
         uint256 lastUpdateTime,
         uint256 lastMaxLockDuration,
@@ -647,10 +625,33 @@ contract PortalTest is Test {
         assertEq(user, address(Alice));
         assertEq(lastUpdateTime, block.timestamp);
         assertEq(lastMaxLockDuration, maxLockDuration);
-        assertEq(stakedBalance, 1e5);
-        assertEq(maxStakeDebt, 1e5*maxLockDuration/SECONDS_PER_YEAR);
-        assertEq(portalEnergy, 1e5*maxLockDuration/SECONDS_PER_YEAR);
-        assertEq(availableToWithdraw, 1e5);
+        assertEq(stakedBalance, 0);
+        assertEq(maxStakeDebt, 0);
+        assertEq(portalEnergy, 0);
+        assertEq(availableToWithdraw, 0);
+    }
+    function test_forceunStakeWithMintToken() external {
+        help_fundAndActivate();
+        vm.startPrank(Alice);
+        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 1e18);
+        portal.stake(1e5);
+        portal.mintPortalEnergyToken(Alice, 24657);
+        IERC20(eToken).approve(address(portal), 24657);
+        portal.forceUnstakeAll();
+        (address user,
+        uint256 lastUpdateTime,
+        uint256 lastMaxLockDuration,
+        uint256 stakedBalance,
+        uint256 maxStakeDebt,
+        uint256 portalEnergy,
+        uint256 availableToWithdraw) = portal.getUpdateAccount(address(Alice), 0 );
+        assertEq(user, address(Alice));
+        assertEq(lastUpdateTime, block.timestamp);
+        assertEq(lastMaxLockDuration, maxLockDuration);
+        assertEq(stakedBalance, 0);
+        assertEq(maxStakeDebt, 0);
+        assertEq(portalEnergy, 0);
+        assertEq(availableToWithdraw, 0);
     }
     // ---------------------------------------------------
     // ---------------buy and sell energy token-----------
@@ -1012,6 +1013,28 @@ contract PortalTest is Test {
     // ---------------------------------------------------
     // ---------------------view--------------------------
     // ---------------------------------------------------
+    function test_quoteBuyPortalEnergy() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        uint256 amount = portal.quoteBuyPortalEnergy(1e15);
+        assertEq(amount, 1817273181591);
+    }
+    function test_quoteSellPortalEnergy() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        uint256 amount = portal.quoteSellPortalEnergy(1e15);
+        assertEq(amount, 431372549019607876);
+    }
+    function test_quoteforceUnstakeAll() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice); //246575342465753424
+        portal.mintPortalEnergyToken(Alice, 123287671232876712); //123287671232876712
+        uint256 amount = portal.quoteforceUnstakeAll(Alice);
+        assertEq(amount, 123287671232876712);
+    }
     function test_getBalanceOfToken() external{
         assertEq(portal.getBalanceOfToken(PSM_ADDRESS), 0);
         IERC20(PSM_ADDRESS).transfer(address(portal), 1e5);

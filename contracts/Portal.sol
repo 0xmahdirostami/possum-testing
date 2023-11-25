@@ -2,7 +2,7 @@
 pragma solidity =0.8.19;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol"; //@audit user v4.9
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol"; //@audit use v4.9
 import {MintBurnToken} from "./MintBurnToken.sol";
 import {IStaking} from "./interfaces/IStaking.sol";
 import {ICompounder} from "./interfaces/ICompounder.sol";
@@ -619,7 +619,7 @@ contract Portal is ReentrancyGuard {
 
     /// @notice Simulate buying portalEnergy (output) with PSM tokens (input) and return amount received (output)
     /// @dev This function allows the caller to simulate a portalEnergy buy order of any size
-    function quoteBuyPortalEnergy(uint256 _amountInput) external activePortalCheck view returns(uint256) { 
+    function quoteBuyPortalEnergy(uint256 _amountInput) external activePortalCheck view returns(uint256) { //Done
         /// @dev Calculate the PSM token reserve (input)
         uint256 reserve0 = IERC20(PSM_ADDRESS).balanceOf(address(this)) - fundingRewardPool;
 
@@ -635,7 +635,7 @@ contract Portal is ReentrancyGuard {
 
     /// @notice Simulate selling portalEnergy (input) against PSM tokens (output) and return amount received (output)
     /// @dev This function allows the caller to simulate a portalEnergy sell order of any size
-    function quoteSellPortalEnergy(uint256 _amountInput) external activePortalCheck view returns(uint256) {
+    function quoteSellPortalEnergy(uint256 _amountInput) external activePortalCheck view returns(uint256) { //Done
         /// @dev Calculate the PSM token reserve (output)
         uint256 reserve0 = IERC20(PSM_ADDRESS).balanceOf(address(this)) - fundingRewardPool;
 
@@ -942,7 +942,7 @@ contract Portal is ReentrancyGuard {
     /// @notice Simulate forced unstake and return the number of portal energy tokens to be burned      
     /// @param _user The user whose stake position is to be updated for the simulation
     /// @return portalEnergyTokenToBurn Returns the number of portal energy tokens to be burned for a full unstake
-    function quoteforceUnstakeAll(address _user) external view returns(uint256 portalEnergyTokenToBurn) {
+    function quoteforceUnstakeAll(address _user) external view returns(uint256 portalEnergyTokenToBurn) { //Done
 
         /// @dev Get the relevant data from the simulated account update
         (, , , , uint256 maxStakeDebt, uint256 portalEnergy,) = getUpdateAccount(_user,0);
