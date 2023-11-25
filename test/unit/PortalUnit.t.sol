@@ -54,7 +54,7 @@ contract PortalTest is Test {
 
     // tokens
     MintBurnToken bToken = new MintBurnToken("BT","BT");
-    MintBurnToken eToken = new MintBurnToken("BT","BT");
+    MintBurnToken eToken = new MintBurnToken("ET","ET");
     
     // ============================================
     // ==               CUSTOM EVENT             ==
@@ -187,7 +187,7 @@ contract PortalTest is Test {
         portal.burnBtokens(0);
     }    
 
-    // event
+    // events
     function testEvent_funding() public {
         vm.startPrank(Alice);
         IERC20(PSM_ADDRESS).approve(address(portal), 1e5);
