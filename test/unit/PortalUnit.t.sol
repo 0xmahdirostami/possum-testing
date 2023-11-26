@@ -320,7 +320,6 @@ contract PortalTest is Test {
         vm.warp(timestamp + 31536000 * 10);
         portal.updateMaxLockDuration(); 
         assertEq(portal.maxLockDuration(), _TERMINAL_MAX_LOCK_DURATION); 
-            
     }
 
     // ---------------------------------------------------
@@ -886,34 +885,7 @@ contract PortalTest is Test {
         uint256 balanceAfter = IERC20(USDCe).balanceOf(address(portal));
         assertGt(balanceAfter, balanceBefore);
     }
-     function test_compoundMahdi() external { 
-        help_fundAndActivate();
-        help_stake();
-        vm.startPrank(Alice);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 10e25);
-        portal.stake(10e25);
-        console2.log("10e25 staked");
-        uint256 balance = IERC20(USDCe).balanceOf(address(portal));
-        console2.log("USDCe balance before claimRewardsHLPandHMX", balance);
-        portal.claimRewardsHLPandHMX();
-        balance = IERC20(USDCe).balanceOf(address(portal));
-        console2.log("USDCe balance after first claimRewardsHLPandHMX", balance);
-        vm.startPrank(Bob);
-        IERC20(PRINCIPAL_TOKEN_ADDRESS).approve(address(portal), 10e25);
-        portal.stake(10e25);
-        console2.log("another 10e25 staked");
-        vm.warp(timeAfterActivating + 50 days);
-        console2.log("50 days");
-        portal.claimRewardsHLPandHMX();
-        balance = IERC20(USDCe).balanceOf(address(portal));
-        console2.log("USDCe balance now", balance);
-        vm.warp(timeAfterActivating + 100000 days);
-        console2.log("100000 days");
-        portal.claimRewardsHLPandHMX();
-        balance = IERC20(USDCe).balanceOf(address(portal));
-        console2.log(balance);
-        console2.log("USDCe balance now", balance);
-    }
+
     // ---------------------------------------------------
     // ---------------------convert-----------------------
     // ---------------------------------------------------
