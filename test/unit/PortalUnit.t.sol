@@ -317,9 +317,10 @@ contract PortalTest is Test {
         vm.warp(timestamp + maxLockDuration + 1);
         portal.updateMaxLockDuration(); 
         assertEq(portal.maxLockDuration(), 2*(timestamp + maxLockDuration + 1 - portal.CREATION_TIME()));
-        vm.warp(timestamp + 365 * 5 days);
+        vm.warp(timestamp + 31536000 * 10);
         portal.updateMaxLockDuration(); 
-        assertEq(portal.maxLockDuration(), _TERMINAL_MAX_LOCK_DURATION);        
+        assertEq(portal.maxLockDuration(), _TERMINAL_MAX_LOCK_DURATION); 
+            
     }
 
     // ---------------------------------------------------
@@ -389,7 +390,7 @@ contract PortalTest is Test {
         vm.startPrank(Alice);
         portal.mintPortalEnergyToken(Karen, 246575342465753424);
         assertEq(eToken.balanceOf(Karen), 246575342465753424);
-         (, , , , , uint256 portalEnergy,) = portal.getUpdateAccount(Alice,0);
+        (, , , , , uint256 portalEnergy,) = portal.getUpdateAccount(Alice,0);
         assertEq(portalEnergy, 0);
     }
 
@@ -563,8 +564,8 @@ contract PortalTest is Test {
         assertEq(lastUpdateTime, block.timestamp);
         assertEq(lastMaxLockDuration, maxLockDuration);
         assertEq(stakedBalance, 1e5);
-        assertEq(maxStakeDebt, 1e5*maxLockDuration/SECONDS_PER_YEAR);
-        assertEq(portalEnergy, 1e5*maxLockDuration/SECONDS_PER_YEAR);
+        assertEq(maxStakeDebt, 1e5*maxLockDuration*1e18/(SECONDS_PER_YEAR*_DECIMALS));
+        assertEq(portalEnergy, 1e5*maxLockDuration*1e18/(SECONDS_PER_YEAR*_DECIMALS));
         assertEq(availableToWithdraw, 1e5);
     }
     function test_reStake() external {
@@ -608,6 +609,30 @@ contract PortalTest is Test {
         assertEq(maxStakeDebt, 0);
         assertEq(portalEnergy, 0);
         assertEq(availableToWithdraw, 0);
+    }
+    function test_unStakeAvailableToWithdraw() external{
+        help_fundAndActivate();
+        help_stake();
+        vm.startPrank(Alice);
+        portal.mintPortalEnergyToken(Alice, 10000000);
+        (address user,
+        uint256 lastUpdateTime,
+        uint256 lastMaxLockDuration,
+        uint256 stakedBalance,
+        uint256 maxStakeDebt,
+        uint256 portalEnergy,
+        uint256 availableToWithdraw) = portal.getUpdateAccount(address(Alice), 0 );
+        portal.unstake(availableToWithdraw);
+        ( user,
+         lastUpdateTime,
+         lastMaxLockDuration,
+         stakedBalance,
+         maxStakeDebt,
+         portalEnergy,
+         availableToWithdraw) = portal.getUpdateAccount(address(Alice), 0 );
+         assertEq(stakedBalance*maxLockDuration/SECONDS_PER_YEAR, maxStakeDebt);
+         assertEq(portalEnergy, 0);
+         assertEq(availableToWithdraw, 0);
     }
     function test_forceunStake() external {
         help_fundAndActivate();
@@ -1047,5 +1072,4 @@ contract PortalTest is Test {
         assertGt(portal.getPendingRewards(HLP_PROTOCOL_REWARDER), 0);
         assertGt(portal.getPendingRewards(HLP_EMISSIONS_REWARDER), 0);
     }
-
 }
