@@ -6,7 +6,6 @@ import {Portal} from "../../contracts/Portal.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MintBurnToken} from "../mocks/MintToken.sol";
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                Done by mahdiRostami 
 //                              I have availability for smart contract security audits and testing. 
@@ -120,7 +119,7 @@ contract PortalTest is Test {
             _AMOUNT_TO_CONVERT,
             _TRADE_TIMELOCK
             );
-
+        console2.log(address(portal));
         // creation time
         timestamp = block.timestamp;
         timeAfterActivating = timestamp + _FUNDING_PHASE_DURATION;
@@ -1004,7 +1003,8 @@ contract PortalTest is Test {
     }
     function test_acceptETHwithData() external{
         assertEq(address(portal).balance, 0);
-        address(portal).call{value: 1 ether}("0xPortal");
+        (bool sent, ) = address(portal).call{value: 1 ether}("0xPortal");
+        require(sent);
         assertEq(address(portal).balance, 1 ether);
     }
     // ---------------------------------------------------
