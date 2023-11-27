@@ -119,7 +119,7 @@ contract PortalTest is Test {
             _AMOUNT_TO_CONVERT,
             _TRADE_TIMELOCK
             );
-        console2.log(address(portal));
+
         // creation time
         timestamp = block.timestamp;
         timeAfterActivating = timestamp + _FUNDING_PHASE_DURATION;
@@ -1010,6 +1010,14 @@ contract PortalTest is Test {
     // ---------------------------------------------------
     // ---------------------view--------------------------
     // ---------------------------------------------------
+    function test_getBurnValuePSM() external{
+        help_fundAndActivate();
+        assertEq(portal.getBurnValuePSM(1e18), 0);
+        IERC20(PSM_ADDRESS).approve(address(portal), _AMOUNT_TO_CONVERT);
+        IERC20(USDCe).transfer(address(portal), 1);
+        portal.convert(address(USDCe), 0, timeAfterActivating + 1);
+        assertEq(portal.getBurnValuePSM(1e18), 500000000000000000000);
+    }
     function test_quoteBuyPortalEnergy() external{
         help_fundAndActivate();
         help_stake();

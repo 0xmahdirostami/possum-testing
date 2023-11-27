@@ -904,9 +904,9 @@ contract Portal is ReentrancyGuard {
             (block.timestamp - accounts[_user].lastUpdateTime) * 1e18) / (SECONDS_PER_YEAR * DECIMALS);
       
         // @dev Calculate the increase of portalEnergy due to balance increase
-        uint256 portalEnergyIncrease = ((accounts[_user].stakedBalance * (maxLockDuration - 
-            accounts[_user].lastMaxLockDuration) + (_amount * maxLockDuration)) * 1e18) / (SECONDS_PER_YEAR * DECIMALS);
-
+        // uint256 portalEnergyIncrease = ((accounts[_user].stakedBalance * (maxLockDuration - 
+        //     accounts[_user].lastMaxLockDuration) + (_amount * maxLockDuration)) * 1e18) / (SECONDS_PER_YEAR * DECIMALS);
+        uint256 portalEnergyIncrease = 0;
         /// @dev Set the last update time to the current timestamp
         lastUpdateTime = block.timestamp;
 

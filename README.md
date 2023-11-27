@@ -2,5 +2,4 @@
 
 - TEST COVERAGE:
 
-  
-![TEST](https://github.com/0xmahdirostami/possum-testing/blob/Portals-Patches-HatsCompetition/Screenshot%202023-11-27%20170225.png)
+![TEST](https://github.com/0xmahdirostami/possum-testing/blob/Portals-Patches-HatsCompetition/coverage.png)
